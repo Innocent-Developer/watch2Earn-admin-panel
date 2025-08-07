@@ -1,0 +1,38 @@
+{
+  "name": "watch2earn-admin-panel",
+  "version": "1.0.0",
+  "description": "A modern, responsive admin panel for managing the Watch2Earn platform",
+  "main": "index.html",
+  "scripts": {
+    "start": "python -m http.server 8000",
+    "serve": "npx serve .",
+    "dev": "npx live-server --port=8000",
+    "build": "echo 'No build process needed for static files'",
+    "test": "echo 'No tests specified'"
+  },
+  "keywords": [
+    "admin-panel",
+    "dashboard",
+    "responsive",
+    "modern",
+    "watch2earn",
+    "management"
+  ],
+  "author": "Your Name",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/yourusername/watch2earn-admin-panel.git"
+  },
+  "bugs": {
+    "url": "https://github.com/yourusername/watch2earn-admin-panel/issues"
+  },
+  "homepage": "https://github.com/yourusername/watch2earn-admin-panel#readme",
+  "devDependencies": {
+    "serve": "^14.2.0",
+    "live-server": "^1.2.2"
+  },
+  "engines": {
+    "node": ">=14.0.0"
+  }
+} 

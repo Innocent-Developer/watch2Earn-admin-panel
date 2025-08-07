@@ -9,7 +9,6 @@ const loginError = document.getElementById('login-error');
 const sidebar = document.getElementById('sidebar');
 const sidebarItems = document.querySelectorAll('.sidebar-item');
 const contentArea = document.getElementById('content-area');
-const logoutButton = document.getElementById('logout-button');
 const messageBox = document.getElementById('message-box');
 
 // New DOM elements for login loader
@@ -139,6 +138,9 @@ function renderPage(pageName) {
         case 'users':
             renderUsers();
             break;
+        case 'all-users':
+            renderAllUsers();
+            break;
         case 'create-ad':
             renderCreateAd();
             break;
@@ -154,42 +156,92 @@ async function renderDashboard() {
     contentArea.innerHTML = '<h3>Dashboard</h3><div class="card stats-grid" id="stats-grid"></div>';
     const statsGrid = document.getElementById('stats-grid');
     
+    // Initialize default values
+    let totalDeposits = '0';
+    let totalDepositAmount = 0;
+    let totalWithdrawals = '0';
+    let totalWithdrawalAmount = 0;
+    let totalUsers = '0';
+    
     try {
-        const [depositStatsRes, withdrawalStatsRes, userStatsRes] = await Promise.all([
-            fetch(`${API_BASE_URL}/admin/deposits/stats`, {
+        // Try to fetch deposit stats
+        try {
+            const depositStatsRes = await fetch(`${API_BASE_URL}/admin/deposits/stats`, {
                 headers: { 'Authorization': `Bearer ${adminToken}` }
-            }),
-            fetch(`${API_BASE_URL}/admin/withdrawals/stats`, {
+            });
+            const depositStats = await depositStatsRes.json();
+            console.log('Deposit Stats Response:', depositStats);
+            
+            totalDeposits = depositStats?.data?.totalDeposits || 
+                           depositStats?.totalDeposits || 
+                           depositStats?.data?.deposits?.length || 
+                           '0';
+            
+            totalDepositAmount = depositStats?.data?.totalAmount || 
+                               depositStats?.totalAmount || 
+                               depositStats?.data?.amount || 
+                               0;
+        } catch (error) {
+            console.error('Failed to fetch deposit stats:', error);
+        }
+        
+        // Try to fetch withdrawal stats
+        try {
+            const withdrawalStatsRes = await fetch(`${API_BASE_URL}/admin/withdrawals/stats`, {
                 headers: { 'Authorization': `Bearer ${adminToken}` }
-            }),
-            fetch(`${API_BASE_URL}/admin/users/search`, { // Fetch all users to get total count
+            });
+            const withdrawalStats = await withdrawalStatsRes.json();
+            console.log('Withdrawal Stats Response:', withdrawalStats);
+            
+            totalWithdrawals = withdrawalStats?.data?.totalWithdrawals || 
+                              withdrawalStats?.totalWithdrawals || 
+                              withdrawalStats?.data?.withdrawals?.length || 
+                              '0';
+            
+            totalWithdrawalAmount = withdrawalStats?.data?.totalAmount || 
+                                   withdrawalStats?.totalAmount || 
+                                   withdrawalStats?.data?.amount || 
+                                   0;
+        } catch (error) {
+            console.error('Failed to fetch withdrawal stats:', error);
+        }
+        
+        // Try to fetch user stats
+        try {
+            const userStatsRes = await fetch(`${API_BASE_URL}/admin/users`, {
                 headers: { 'Authorization': `Bearer ${adminToken}` }
-            })
-        ]);
-
-        const depositStats = await depositStatsRes.json();
-        const withdrawalStats = await withdrawalStatsRes.json();
-        const userStats = await userStatsRes.json();
+            });
+            const userStats = await userStatsRes.json();
+            console.log('User Stats Response:', userStats);
+            
+            totalUsers = userStats?.data?.users?.length || 
+                        userStats?.users?.length || 
+                        userStats?.data?.totalUsers || 
+                        userStats?.totalUsers || 
+                        '0';
+        } catch (error) {
+            console.error('Failed to fetch user stats:', error);
+        }
         
         statsGrid.innerHTML = `
             <div class="stat-card">
-                <div class="value">${depositStats.data.totalDeposits || '0'}</div>
+                <div class="value">${totalDeposits}</div>
                 <div class="label">Total Deposits</div>
             </div>
             <div class="stat-card">
-                <div class="value">$${(depositStats.data.totalAmount || 0).toFixed(2)}</div>
+                <div class="value">$${parseFloat(totalDepositAmount).toFixed(2)}</div>
                 <div class="label">Total Deposit Amount</div>
             </div>
             <div class="stat-card">
-                <div class="value">${withdrawalStats.data.totalWithdrawals || '0'}</div>
+                <div class="value">${totalWithdrawals}</div>
                 <div class="label">Total Withdrawals</div>
             </div>
             <div class="stat-card">
-                <div class="value">$${(withdrawalStats.data.totalAmount || 0).toFixed(2)}</div>
+                <div class="value">$${parseFloat(totalWithdrawalAmount).toFixed(2)}</div>
                 <div class="label">Total Withdrawal Amount</div>
             </div>
             <div class="stat-card">
-                <div class="value">${userStats.data.pagination.totalUsers || '0'}</div>
+                <div class="value">${totalUsers}</div>
                 <div class="label">Total Users</div>
             </div>
             <div class="stat-card">
@@ -199,7 +251,13 @@ async function renderDashboard() {
         `;
     } catch (error) {
         console.error('Failed to fetch stats:', error);
-        statsGrid.innerHTML = '<p class="error-message">Failed to load statistics.</p>';
+        statsGrid.innerHTML = `
+            <div class="error-message">
+                <p>Failed to load statistics.</p>
+                <p>Error: ${error.message}</p>
+                <button onclick="renderDashboard()" class="btn-approve">Retry</button>
+            </div>
+        `;
     }
 }
 
@@ -211,20 +269,22 @@ async function renderDeposits() {
         <div class="card">
             <h3>Deposit Requests</h3>
             <div class="table-container">
-                <table class="data-table">
-                    <thead>
-                        <tr>
-                            <th>Deposit ID</th>
-                            <th>User UID</th>
-                            <th>Amount</th>
-                            <th>Status</th>
-                            <th>Action</th>
-                        </tr>
-                    </thead>
-                    <tbody id="deposits-table-body">
-                        <tr><td colspan="5">Loading deposits...</td></tr>
-                    </tbody>
-                </table>
+                <div class="table-responsive">
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>Deposit ID</th>
+                                <th>User UID</th>
+                                <th>Amount</th>
+                                <th>Status</th>
+                                <th>Action</th>
+                            </tr>
+                        </thead>
+                        <tbody id="deposits-table-body">
+                            <tr><td colspan="5">Loading deposits...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
             </div>
         </div>
     `;
@@ -239,18 +299,21 @@ async function renderDeposits() {
         
         depositsTableBody.innerHTML = deposits.map(deposit => `
             <tr>
-                <td>${deposit._id}</td>
-                <td>${deposit.uid}</td>
-                <td>$${deposit.amount}</td>
-                <td><span class="badge ${deposit.status.toLowerCase()}">${deposit.status}</span></td>
-                <td>
-                    ${deposit.status === 'pending' ? `<button class="btn-approve" onclick="approveDeposit('${deposit._id}')">Approve</button>` : ''}
+                <td data-label="Deposit ID">${deposit._id}</td>
+                <td data-label="User UID">${deposit.uid}</td>
+                <td data-label="Amount">$${deposit.amount}</td>
+                <td data-label="Status"><span class="badge ${deposit.status.toLowerCase()}">${deposit.status}</span></td>
+                <td data-label="Action">
+                    ${deposit.status === 'pending' ? `<button class="btn-approve btn-small" onclick="approveDeposit('${deposit._id}')">
+                        <i class="fas fa-check"></i>
+                        <span class="btn-text">Approve</span>
+                    </button>` : '<span class="no-action">No action needed</span>'}
                 </td>
             </tr>
         `).join('');
     } catch (error) {
         console.error('Failed to fetch deposits:', error);
-        depositsTableBody.innerHTML = `<tr><td colspan="5">Failed to load deposits.</td></tr>`;
+        depositsTableBody.innerHTML = `<tr><td colspan="5" class="error-data">Failed to load deposits.</td></tr>`;
     }
 }
 
@@ -289,20 +352,22 @@ async function renderWithdrawals() {
         <div class="card">
             <h3>Withdrawal Requests</h3>
             <div class="table-container">
-                <table class="data-table">
-                    <thead>
-                        <tr>
-                            <th>Request ID</th>
-                            <th>User UID</th>
-                            <th>Amount</th>
-                            <th>Status</th>
-                            <th>Action</th>
-                        </tr>
-                    </thead>
-                    <tbody id="withdrawals-table-body">
-                        <tr><td colspan="5">Loading withdrawals...</td></tr>
-                    </tbody>
-                </table>
+                <div class="table-responsive">
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>Request ID</th>
+                                <th>User UID</th>
+                                <th>Amount</th>
+                                <th>Status</th>
+                                <th>Action</th>
+                            </tr>
+                        </thead>
+                        <tbody id="withdrawals-table-body">
+                            <tr><td colspan="5">Loading withdrawals...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
             </div>
         </div>
     `;
@@ -316,18 +381,21 @@ async function renderWithdrawals() {
         
         withdrawalsTableBody.innerHTML = withdrawals.map(withdrawal => `
             <tr>
-                <td>${withdrawal._id}</td>
-                <td>${withdrawal.user.uid}</td>
-                <td>$${withdrawal.amount}</td>
-                <td><span class="badge ${withdrawal.status.toLowerCase()}">${withdrawal.status}</span></td>
-                <td>
-                    ${withdrawal.status === 'pending' ? `<button class="btn-approve" onclick="approveWithdrawal('${withdrawal._id}')">Approve</button>` : ''}
+                <td data-label="Request ID">${withdrawal._id}</td>
+                <td data-label="User UID">${withdrawal.user.uid}</td>
+                <td data-label="Amount">$${withdrawal.amount}</td>
+                <td data-label="Status"><span class="badge ${withdrawal.status.toLowerCase()}">${withdrawal.status}</span></td>
+                <td data-label="Action">
+                    ${withdrawal.status === 'pending' ? `<button class="btn-approve btn-small" onclick="approveWithdrawal('${withdrawal._id}')">
+                        <i class="fas fa-check"></i>
+                        <span class="btn-text">Approve</span>
+                    </button>` : '<span class="no-action">No action needed</span>'}
                 </td>
             </tr>
         `).join('');
     } catch (error) {
         console.error('Failed to fetch withdrawals:', error);
-        withdrawalsTableBody.innerHTML = `<tr><td colspan="5">Failed to load withdrawals.</td></tr>`;
+        withdrawalsTableBody.innerHTML = `<tr><td colspan="5" class="error-data">Failed to load withdrawals.</td></tr>`;
     }
 }
 
@@ -369,6 +437,9 @@ async function renderUsers() {
                 <input type="text" id="search-value" placeholder="Enter User UID, Name, Email, or Phone">
                 <button type="submit">Search</button>
             </form>
+            <div class="mt-3">
+                <button class="btn-approve" onclick="renderPage('all-users')">View All Users</button>
+            </div>
         </div>
         <div id="user-search-results"></div>
     `;
@@ -520,6 +591,141 @@ function renderCreateAd() {
     });
 }
 
+/**
+ * Fetches all users from the API.
+ * @returns {Promise<Array>} Array of all users
+ */
+async function getAllUsers() {
+    try {
+        const response = await fetch(`${API_BASE_URL}/admin/users`, {
+            headers: { 'Authorization': `Bearer ${adminToken}` }
+        });
+        
+        const data = await response.json();
+        if (response.ok && data.success) {
+            return data.data.users || [];
+        } else {
+            console.error('Failed to fetch users:', data.message);
+            return [];
+        }
+    } catch (error) {
+        console.error('Error fetching users:', error);
+        return [];
+    }
+}
+
+/**
+ * Renders all users in a table format.
+ */
+async function renderAllUsers() {
+    contentArea.innerHTML = `
+        <div class="card">
+            <h3>All Users</h3>
+            <div class="table-container">
+                <div class="table-responsive">
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>UID</th>
+                                <th>Name</th>
+                                <th>Email</th>
+                                <th>Phone</th>
+                                <th>Balance</th>
+                                <th>Plan</th>
+                                <th>Level</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="all-users-table-body">
+                            <tr><td colspan="8">Loading users...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    `;
+
+    const usersTableBody = document.getElementById('all-users-table-body');
+    try {
+        const users = await getAllUsers();
+        
+        if (users.length > 0) {
+            usersTableBody.innerHTML = users.map(user => `
+                <tr>
+                    <td data-label="UID">${user.uid}</td>
+                    <td data-label="Name">${user.name || 'N/A'}</td>
+                    <td data-label="Email">${user.email || 'N/A'}</td>
+                    <td data-label="Phone">${user.phoneNumber || 'N/A'}</td>
+                    <td data-label="Balance">$${(user.totalBalance || 0).toFixed(2)}</td>
+                    <td data-label="Plan">${user.plan || 'N/A'}</td>
+                    <td data-label="Level">${user.level || 'N/A'}</td>
+                    <td data-label="Actions">
+                        <div class="action-buttons">
+                            <button class="btn-approve btn-small" onclick="viewUserDetails('${user.uid}')">
+                                <i class="fas fa-eye"></i>
+                                <span class="btn-text">View</span>
+                            </button>
+                            <button class="btn-approve btn-small" onclick="viewTeam('${user.referralCode}')">
+                                <i class="fas fa-users"></i>
+                                <span class="btn-text">Team</span>
+                            </button>
+                        </div>
+                    </td>
+                </tr>
+            `).join('');
+        } else {
+            usersTableBody.innerHTML = '<tr><td colspan="8" class="no-data">No users found.</td></tr>';
+        }
+    } catch (error) {
+        console.error('Failed to fetch users:', error);
+        usersTableBody.innerHTML = '<tr><td colspan="8" class="error-data">Failed to load users.</td></tr>';
+    }
+}
+
+/**
+ * Views detailed information for a specific user.
+ * @param {string} uid The user ID to view details for.
+ */
+async function viewUserDetails(uid) {
+    try {
+        const response = await fetch(`${API_BASE_URL}/admin/user/${uid}`, {
+            headers: { 'Authorization': `Bearer ${adminToken}` }
+        });
+        
+        const data = await response.json();
+        if (response.ok && data.success) {
+            const user = data.data.user;
+            const userDetailsDiv = document.getElementById('all-users-table-body').parentElement.parentElement;
+            
+            userDetailsDiv.innerHTML = `
+                <div class="card">
+                    <h3>User Details - ${user.name}</h3>
+                    <div class="user-details">
+                        <p><strong>UID:</strong> ${user.uid}</p>
+                        <p><strong>Name:</strong> ${user.name}</p>
+                        <p><strong>Email:</strong> ${user.email}</p>
+                        <p><strong>Phone:</strong> ${user.phoneNumber}</p>
+                        <p><strong>Balance:</strong> $${(user.totalBalance || 0).toFixed(2)}</p>
+                        <p><strong>Plan:</strong> ${user.plan}</p>
+                        <p><strong>Level:</strong> ${user.level}</p>
+                        <p><strong>Referral Code:</strong> ${user.referralCode}</p>
+                        <p><strong>Joined:</strong> ${new Date(user.createdAt).toLocaleDateString()}</p>
+                    </div>
+                    <div class="button-group">
+                        <button class="btn-approve" onclick="viewTeam('${user.referralCode}')">View Team</button>
+                        <button class="btn-approve" onclick="renderAllUsers()">Back to All Users</button>
+                    </div>
+                </div>
+            `;
+        } else {
+            showMessage(`Error: ${data.message}`);
+        }
+    } catch (error) {
+        console.error('Failed to fetch user details:', error);
+        showMessage('Failed to fetch user details.');
+    }
+}
+
 // ====================================================================================================
 // Event Listeners and Initialization
 // ====================================================================================================
@@ -528,7 +734,12 @@ function renderCreateAd() {
 loginForm.addEventListener('submit', handleLogin);
 
 // Attach logout handler
-logoutButton.addEventListener('click', handleLogout);
+document.addEventListener('DOMContentLoaded', () => {
+    const logoutBtn = document.querySelector('.logout-btn');
+    if (logoutBtn) {
+        logoutBtn.addEventListener('click', handleLogout);
+    }
+});
 
 // Attach navigation handlers
 sidebarItems.forEach(item => {
