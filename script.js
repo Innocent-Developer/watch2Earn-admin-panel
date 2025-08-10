@@ -144,6 +144,12 @@ function renderPage(pageName) {
         case 'create-ad':
             renderCreateAd();
             break;
+        case 'add-admin-account':
+            renderAddAdminAccount();
+            break;
+        case 'view-admin-accounts':
+            renderAdminAccounts();
+            break;
         default:
             contentArea.innerHTML = '<div class="card"><h3>Page Not Found</h3></div>';
     }
@@ -468,13 +474,15 @@ async function renderUsers() {
                     searchResultsDiv.innerHTML = `
                         <div class="card">
                             <h3>User Details</h3>
-                            <p><strong>UID:</strong> ${user.uid}</p>
-                            <p><strong>Name:</strong> ${user.name}</p>
-                            <p><strong>Email:</strong> ${user.email}</p>
-                            <p><strong>Phone:</strong> ${user.phoneNumber}</p>
-                            <p><strong>Balance:</strong> $${(user.totalBalance || 0).toFixed(2)}</p>
-                            <p><strong>Plan:</strong> ${user.plan}</p>
-                            <p><strong>Level:</strong> ${user.level}</p>
+                            <div class="user-details">
+                                <p><strong>UID:</strong> ${user.uid}</p>
+                                <p><strong>Name:</strong> ${user.name}</p>
+                                <p><strong>Email:</strong> ${user.email}</p>
+                                <p><strong>Phone:</strong> ${user.phoneNumber}</p>
+                                <p><strong>Balance:</strong> $${(user.totalBalance || 0).toFixed(2)}</p>
+                                <p><strong>Plan:</strong> ${user.plan}</p>
+                                <p><strong>Level:</strong> ${user.level}</p>
+                            </div>
                             <button class="btn-approve mt-4" onclick="viewTeam('${user.referralCode}')">View Team</button>
                         </div>
                     `;
@@ -725,6 +733,94 @@ async function viewUserDetails(uid) {
         showMessage('Failed to fetch user details.');
     }
 }
+
+/**
+ * Renders the form to add a new admin bank account.
+ */
+async function renderAddAdminAccount() {
+    contentArea.innerHTML = `
+        <div class="card">
+            <h3>Add Admin Bank Account</h3>
+            <form id="add-account-form" class="form-container">
+                <input type="text" id="account-holder-name" placeholder="Account Holder Name" required>
+                <input type="text" id="account-number" placeholder="Account Number" required>
+                <input type="text" id="bank-name" placeholder="Bank Name" required>
+                <button type="submit">Add Account</button>
+            </form>
+        </div>
+    `;
+
+    const addAccountForm = document.getElementById('add-account-form');
+    addAccountForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const accountHolderName = document.getElementById('account-holder-name').value;
+        const accountNumber = document.getElementById('account-number').value;
+        const bankName = document.getElementById('bank-name').value;
+
+        try {
+            const response = await fetch(`${API_BASE_URL}/admin/account/add`, {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${adminToken}`,
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ accountHolderName, accountNumber, bankName })
+            });
+
+            const data = await response.json();
+            if (response.ok) {
+                showMessage('Admin account added successfully!');
+                addAccountForm.reset();
+            } else {
+                showMessage(`Error: ${data.message}`);
+            }
+        } catch (error) {
+            console.error('Failed to add admin account:', error);
+            showMessage('Failed to add admin account.');
+        }
+    });
+}
+
+/**
+ * Renders the page to view admin bank account information.
+ */
+async function renderAdminAccounts() {
+    contentArea.innerHTML = `
+        <div class="card">
+            <h3>Admin Bank Accounts</h3>
+            <button class="btn-approve mb-3" onclick="renderAdminAccounts()"><i class="fas fa-sync"></i> Refresh</button>
+            <div id="admin-accounts-list" class="accounts-grid">
+                <p>Loading accounts...</p>
+            </div>
+        </div>
+    `;
+
+    const accountsList = document.getElementById('admin-accounts-list');
+    try {
+        const response = await fetch(`${API_BASE_URL}/admin/account`, {
+            headers: { 'Authorization': `Bearer ${adminToken}` }
+        });
+        const data = await response.json();
+
+        if (response.ok && Array.isArray(data) && data.length > 0) {
+            accountsList.innerHTML = data.map(account => `
+                <div class="account-card">
+                    <p><strong>Account Holder:</strong> ${account.accountHolderName}</p>
+                    <p><strong>Bank Name:</strong> ${account.bankName}</p>
+                    <p><strong>Account Number:</strong> ${account.accountNumber}</p>
+                    <p><strong>Status:</strong> <span class="badge ${account.isActive ? 'approved' : 'pending'}">${account.isActive ? 'Active' : 'Inactive'}</span></p>
+                    <p class="text-sm text-gray-500 mt-2">Added: ${new Date(account.createdAt).toLocaleDateString()}</p>
+                </div>
+            `).join('');
+        } else {
+            accountsList.innerHTML = '<p class="no-data">No admin accounts found.</p>';
+        }
+    } catch (error) {
+        console.error('Failed to fetch admin accounts:', error);
+        accountsList.innerHTML = `<p class="error-data">Failed to load admin accounts. Please try refreshing.</p>`;
+    }
+}
+
 
 // ====================================================================================================
 // Event Listeners and Initialization
