@@ -150,6 +150,9 @@ function renderPage(pageName) {
         case 'view-admin-accounts':
             renderAdminAccounts();
             break;
+        case 'all-ads':
+            renderAllAds();
+            break;
         default:
             contentArea.innerHTML = '<div class="card"><h3>Page Not Found</h3></div>';
     }
@@ -573,7 +576,13 @@ function renderCreateAd() {
         const videoUrl = document.getElementById('ad-video-url').value;
         const imageUrl = document.getElementById('ad-image-url').value;
         const link = document.getElementById('ad-link').value;
-        const duration = parseInt(document.getElementById('ad-duration').value);
+        const durationInSeconds = parseInt(document.getElementById('ad-duration').value);
+
+        // Client-side validation to prevent bad requests
+        if (!name || !link || isNaN(durationInSeconds) || durationInSeconds <= 0) {
+            showMessage('Error: Name, link, and a valid duration (greater than 0) are required fields.');
+            return;
+        }
 
         try {
             const response = await fetch(`${API_BASE_URL}/admin/create-ad`, {
@@ -582,7 +591,15 @@ function renderCreateAd() {
                     'Authorization': `Bearer ${adminToken}`,
                     'Content-Type': 'application/json'
                 },
-                body: JSON.stringify({ name, videoUrl, imageUrl, link, duration })
+                body: JSON.stringify({
+                    name,
+                    videoUrl,
+                    imageUrl,
+                    link,
+                    durationInSeconds,
+                    // Adding a unique adId, as the backend model might require it
+                    adId: Date.now().toString()
+                })
             });
             
             const data = await response.json();
@@ -590,11 +607,12 @@ function renderCreateAd() {
                 showMessage('Ad created successfully!');
                 createAdForm.reset();
             } else {
-                showMessage(`Error: ${data.message}`);
+                console.error('API Error:', data); // Log the full error object from the API
+                showMessage(`Error: ${data.message || 'Failed to create ad.'}`);
             }
         } catch (error) {
             console.error('Failed to create ad:', error);
-            showMessage('Failed to create ad.');
+            showMessage('Failed to create ad. An unexpected error occurred.');
         }
     });
 }
@@ -818,6 +836,108 @@ async function renderAdminAccounts() {
     } catch (error) {
         console.error('Failed to fetch admin accounts:', error);
         accountsList.innerHTML = `<p class="error-data">Failed to load admin accounts. Please try refreshing.</p>`;
+    }
+}
+
+/**
+ * Deletes an ad from the system.
+ * @param {string} _id The ID of the ad to delete.
+ * @param {string} adName The name of the ad for confirmation.
+ */
+async function deleteAd(_id, adName) {
+    console.log('Deleting ad:', _id, adName);
+    // Show confirmation dialog
+    if (!confirm(`Are you sure you want to delete the ad "${adName}"? This action cannot be undone.`)) {
+        return;
+    }
+
+    try {
+        const response = await fetch(`${API_BASE_URL}/admin/content/delete`, {
+            method: 'POST',
+            headers: {
+                'Authorization': `Bearer ${adminToken}`,
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ id: _id })
+        });
+
+        const data = await response.json();
+        
+        if (response.ok && data.success) {
+            showMessage('Ad deleted successfully!');
+            renderPage('all-ads'); // Reload the page to show the update
+        } else {
+            showMessage(`Error: ${data.message || 'Failed to delete ad.'}`);
+        }
+    } catch (error) {
+        console.error('Failed to delete ad:', error);
+        showMessage('Failed to delete ad. An unexpected error occurred.');
+    }
+}
+
+/**
+ * Renders a table with all ads.
+ */
+async function renderAllAds() {
+    contentArea.innerHTML = `
+        <div class="card">
+            <h3>All Ads</h3>
+            <div class="table-container">
+                <div class="table-responsive">
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>Ad Name</th>
+                                <th>Video/Image URL</th>
+                                <th>Link</th>
+                                <th>Duration (s)</th>
+                                <th>Created</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="ads-table-body">
+                            <tr><td colspan="6">Loading ads...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    `;
+    const adsTableBody = document.getElementById('ads-table-body');
+    try {
+        const response = await fetch(`${API_BASE_URL}/ads`, {
+            headers: { 'Authorization': `Bearer ${adminToken}` }
+        });
+        const data = await response.json();
+        
+        // Access the ads array from data.data
+        const ads = data?.data?.ads || [];
+
+        if (response.ok && Array.isArray(ads) && ads.length > 0) {
+            adsTableBody.innerHTML = ads.map(ad => `
+                <tr>
+                    <td data-label="Ad Name">${ad.name}</td>
+                    <td data-label="URL">
+                        ${ad.videoUrl ? `<a href="${ad.videoUrl}" target="_blank">Video Link</a>` : ''}
+                        ${ad.imageUrl ? `<a href="${ad.imageUrl}" target="_blank">Image Link</a>` : ''}
+                    </td>
+                    <td data-label="Link"><a href="${ad.link}" target="_blank">${ad.link}</a></td>
+                    <td data-label="Duration">${ad.durationInSeconds || ad.duration || 'N/A'}</td>
+                    <td data-label="Created">${new Date(ad.createdAt).toLocaleDateString()}</td>
+                    <td data-label="Actions">
+                        <button class="btn-delete btn-small" onclick="deleteAd('${ad._id}', '${ad.name}')">
+                            <i class="fas fa-trash"></i>
+                            <span class="btn-text">Delete</span>
+                        </button>
+                    </td>
+                </tr>
+            `).join('');
+        } else {
+            adsTableBody.innerHTML = '<tr><td colspan="6" class="no-data">No ads found.</td></tr>';
+        }
+    } catch (error) {
+        console.error('Failed to fetch ads:', error);
+        adsTableBody.innerHTML = `<tr><td colspan="6" class="error-data">Failed to load ads.</td></tr>`;
     }
 }
 

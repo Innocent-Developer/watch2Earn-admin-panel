@@ -1,11 +1,11 @@
 {
   "name": "watch2earn-admin-panel",
-  "version": "1.0.0",
+  "version": "1.0.2",
   "description": "A modern, responsive admin panel for managing the Watch2Earn platform",
   "main": "index.html",
   "scripts": {
     "start": "python -m http.server 8000",
-    "serve": "npx serve .",
+    "serve": "npx serve .", 
     "dev": "npx live-server --port=8000",
     "build": "echo 'No build process needed for static files'",
     "test": "echo 'No tests specified'"
