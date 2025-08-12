@@ -232,6 +232,24 @@ async function renderDashboard() {
             console.error('Failed to fetch user stats:', error);
         }
         
+        // Try to fetch ads stats
+        let totalAds = '0';
+        try {
+            const adsRes = await fetch(`${API_BASE_URL}/ads`, {
+                headers: { 'Authorization': `Bearer ${adminToken}` }
+            });
+            const adsData = await adsRes.json();
+            console.log('Ads Response:', adsData);
+            
+            totalAds = adsData?.data?.ads?.length || 
+                      adsData?.ads?.length || 
+                      adsData?.data?.totalAds || 
+                      adsData?.totalAds || 
+                      '0';
+        } catch (error) {
+            console.error('Failed to fetch ads stats:', error);
+        }
+        
         statsGrid.innerHTML = `
             <div class="stat-card">
                 <div class="value">${totalDeposits}</div>
@@ -254,7 +272,7 @@ async function renderDashboard() {
                 <div class="label">Total Users</div>
             </div>
             <div class="stat-card">
-                <div class="value">N/A</div>
+                <div class="value">${totalAds}</div>
                 <div class="label">Total Ads</div>
             </div>
         `;
