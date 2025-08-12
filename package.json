@@ -7,7 +7,7 @@
     "start": "python -m http.server 8000",
     "serve": "npx serve .", 
     "dev": "npx live-server --port=8000",
-    "build": "echo 'No build process needed for static files'",
+    "build": "mkdir -p public && cp -r *.html *.js *.css public/",
     "test": "echo 'No tests specified'"
   },
   "keywords": [
