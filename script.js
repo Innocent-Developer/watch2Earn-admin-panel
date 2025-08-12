@@ -846,6 +846,26 @@ async function renderAdminAccounts() {
                     <p><strong>Account Number:</strong> ${account.accountNumber}</p>
                     <p><strong>Status:</strong> <span class="badge ${account.isActive ? 'approved' : 'pending'}">${account.isActive ? 'Active' : 'Inactive'}</span></p>
                     <p class="text-sm text-gray-500 mt-2">Added: ${new Date(account.createdAt).toLocaleDateString()}</p>
+                    <div class="account-actions mt-3">
+                        <button class="btn-approve btn-small" onclick="editAdminAccount('${account._id}', '${account.accountHolderName}', '${account.accountNumber}', '${account.bankName}', ${account.isActive})">
+                            <i class="fas fa-edit"></i>
+                            <span class="btn-text">Edit</span>
+                        </button>
+                        <button class="btn-delete btn-small" onclick="deleteAdminAccount('${account._id}', '${account.accountHolderName}')">
+                            <i class="fas fa-trash"></i>
+                            <span class="btn-text">Delete</span>
+                        </button>
+                        ${account.isActive ? 
+                            `<button class="btn-delete btn-small" onclick="deactivateAdminAccount('${account._id}', '${account.accountHolderName}')">
+                                <i class="fas fa-ban"></i>
+                                <span class="btn-text">Deactivate</span>
+                            </button>` : 
+                            `<button class="btn-approve btn-small" onclick="activateAdminAccount('${account._id}', '${account.accountHolderName}')">
+                                <i class="fas fa-check"></i>
+                                <span class="btn-text">Activate</span>
+                            </button>`
+                        }
+                    </div>
                 </div>
             `).join('');
         } else {
@@ -890,6 +910,162 @@ async function deleteAd(_id, adName) {
     } catch (error) {
         console.error('Failed to delete ad:', error);
         showMessage('Failed to delete ad. An unexpected error occurred.');
+    }
+}
+
+/**
+ * Opens the edit form for an admin account.
+ * @param {string} _id The account ID to edit.
+ * @param {string} accountHolderName The current account holder name.
+ * @param {string} accountNumber The current account number.
+ * @param {string} bankName The current bank name.
+ * @param {boolean} isActive The current active status.
+ */
+function editAdminAccount(_id, accountHolderName, accountNumber, bankName, isActive) {
+    const accountsList = document.getElementById('admin-accounts-list');
+    accountsList.innerHTML = `
+        <div class="card">
+            <h3>Edit Admin Account</h3>
+            <form id="edit-account-form" class="form-container">
+                <input type="text" id="edit-account-holder-name" value="${accountHolderName}" placeholder="Account Holder Name" required>
+                <input type="text" id="edit-account-number" value="${accountNumber}" placeholder="Account Number" required>
+                <input type="text" id="edit-bank-name" value="${bankName}" placeholder="Bank Name" required>
+                <div class="form-group">
+                    <label>
+                        <input type="checkbox" id="edit-is-active" ${isActive ? 'checked' : ''}>
+                        Active Account
+                    </label>
+                </div>
+                <div class="button-group">
+                    <button type="submit" class="btn-approve">Update Account</button>
+                    <button type="button" class="btn-delete" onclick="renderAdminAccounts()">Cancel</button>
+                </div>
+            </form>
+        </div>
+    `;
+
+    const editForm = document.getElementById('edit-account-form');
+    editForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const updatedData = {
+            accountHolderName: document.getElementById('edit-account-holder-name').value,
+            accountNumber: document.getElementById('edit-account-number').value,
+            bankName: document.getElementById('edit-bank-name').value,
+            isActive: document.getElementById('edit-is-active').checked
+        };
+
+        try {
+            const response = await fetch(`${API_BASE_URL}/admin/account/${_id}`, {
+                method: 'PUT',
+                headers: {
+                    'Authorization': `Bearer ${adminToken}`,
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(updatedData)
+            });
+
+            const data = await response.json();
+            if (response.ok) {
+                showMessage('Admin account updated successfully!');
+                renderAdminAccounts();
+            } else {
+                showMessage(`Error: ${data.message}`);
+            }
+        } catch (error) {
+            console.error('Failed to update admin account:', error);
+            showMessage('Failed to update admin account.');
+        }
+    });
+}
+
+/**
+ * Deletes an admin account permanently.
+ * @param {string} _id The account ID to delete.
+ * @param {string} accountHolderName The account holder name for confirmation.
+ */
+async function deleteAdminAccount(_id, accountHolderName) {
+    if (!confirm(`Are you sure you want to permanently delete the account for "${accountHolderName}"? This action cannot be undone.`)) {
+        return;
+    }
+
+    try {
+        const response = await fetch(`${API_BASE_URL}/admin/account/${_id}`, {
+            method: 'DELETE',
+            headers: { 'Authorization': `Bearer ${adminToken}` }
+        });
+
+        const data = await response.json();
+        if (response.ok) {
+            showMessage('Admin account deleted successfully!');
+            renderAdminAccounts();
+        } else {
+            showMessage(`Error: ${data.message}`);
+        }
+    } catch (error) {
+        console.error('Failed to delete admin account:', error);
+        showMessage('Failed to delete admin account.');
+    }
+}
+
+/**
+ * Deactivates an admin account (soft delete).
+ * @param {string} _id The account ID to deactivate.
+ * @param {string} accountHolderName The account holder name for confirmation.
+ */
+async function deactivateAdminAccount(_id, accountHolderName) {
+    if (!confirm(`Are you sure you want to deactivate the account for "${accountHolderName}"?`)) {
+        return;
+    }
+
+    try {
+        const response = await fetch(`${API_BASE_URL}/admin/account/${_id}/deactivate`, {
+            method: 'PATCH',
+            headers: { 'Authorization': `Bearer ${adminToken}` }
+        });
+
+        const data = await response.json();
+        if (response.ok) {
+            showMessage('Admin account deactivated successfully!');
+            renderAdminAccounts();
+        } else {
+            showMessage(`Error: ${data.message}`);
+        }
+    } catch (error) {
+        console.error('Failed to deactivate admin account:', error);
+        showMessage('Failed to deactivate admin account.');
+    }
+}
+
+/**
+ * Activates a previously deactivated admin account.
+ * @param {string} _id The account ID to activate.
+ * @param {string} accountHolderName The account holder name for confirmation.
+ */
+async function activateAdminAccount(_id, accountHolderName) {
+    if (!confirm(`Are you sure you want to activate the account for "${accountHolderName}"?`)) {
+        return;
+    }
+
+    try {
+        const response = await fetch(`${API_BASE_URL}/admin/account/${_id}`, {
+            method: 'PUT',
+            headers: {
+                'Authorization': `Bearer ${adminToken}`,
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ isActive: true })
+        });
+
+        const data = await response.json();
+        if (response.ok) {
+            showMessage('Admin account activated successfully!');
+            renderAdminAccounts();
+        } else {
+            showMessage(`Error: ${data.message}`);
+        }
+    } catch (error) {
+        console.error('Failed to activate admin account:', error);
+        showMessage('Failed to activate admin account.');
     }
 }
 
