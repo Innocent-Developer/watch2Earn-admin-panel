@@ -164,14 +164,14 @@ function renderPage(pageName) {
 async function renderDashboard() {
     contentArea.innerHTML = '<h3>Dashboard</h3><div class="card stats-grid" id="stats-grid"></div>';
     const statsGrid = document.getElementById('stats-grid');
-    
+
     // Initialize default values
     let totalDeposits = '0';
     let totalDepositAmount = 0;
     let totalWithdrawals = '0';
     let totalWithdrawalAmount = 0;
     let totalUsers = '0';
-    
+
     try {
         // Try to fetch deposit stats
         try {
@@ -180,20 +180,20 @@ async function renderDashboard() {
             });
             const depositStats = await depositStatsRes.json();
             console.log('Deposit Stats Response:', depositStats);
-            
-            totalDeposits = depositStats?.data?.totalDeposits || 
-                           depositStats?.totalDeposits || 
-                           depositStats?.data?.deposits?.length || 
-                           '0';
-            
-            totalDepositAmount = depositStats?.data?.totalAmount || 
-                               depositStats?.totalAmount || 
-                               depositStats?.data?.amount || 
-                               0;
+
+            totalDeposits = depositStats?.data?.totalDeposits ||
+                depositStats?.totalDeposits ||
+                depositStats?.data?.deposits?.length ||
+                '0';
+
+            totalDepositAmount = depositStats?.data?.totalAmount ||
+                depositStats?.totalAmount ||
+                depositStats?.data?.amount ||
+                0;
         } catch (error) {
             console.error('Failed to fetch deposit stats:', error);
         }
-        
+
         // Try to fetch withdrawal stats
         try {
             const withdrawalStatsRes = await fetch(`${API_BASE_URL}/admin/withdrawals/stats`, {
@@ -201,20 +201,20 @@ async function renderDashboard() {
             });
             const withdrawalStats = await withdrawalStatsRes.json();
             console.log('Withdrawal Stats Response:', withdrawalStats);
-            
-            totalWithdrawals = withdrawalStats?.data?.totalWithdrawals || 
-                              withdrawalStats?.totalWithdrawals || 
-                              withdrawalStats?.data?.withdrawals?.length || 
-                              '0';
-            
-            totalWithdrawalAmount = withdrawalStats?.data?.totalAmount || 
-                                   withdrawalStats?.totalAmount || 
-                                   withdrawalStats?.data?.amount || 
-                                   0;
+
+            totalWithdrawals = withdrawalStats?.data?.totalWithdrawals ||
+                withdrawalStats?.totalWithdrawals ||
+                withdrawalStats?.data?.withdrawals?.length ||
+                '0';
+
+            totalWithdrawalAmount = withdrawalStats?.data?.totalAmount ||
+                withdrawalStats?.totalAmount ||
+                withdrawalStats?.data?.amount ||
+                0;
         } catch (error) {
             console.error('Failed to fetch withdrawal stats:', error);
         }
-        
+
         // Try to fetch user stats
         try {
             const userStatsRes = await fetch(`${API_BASE_URL}/admin/users`, {
@@ -222,16 +222,16 @@ async function renderDashboard() {
             });
             const userStats = await userStatsRes.json();
             console.log('User Stats Response:', userStats);
-            
-            totalUsers = userStats?.data?.users?.length || 
-                        userStats?.users?.length || 
-                        userStats?.data?.totalUsers || 
-                        userStats?.totalUsers || 
-                        '0';
+
+            totalUsers = userStats?.data?.users?.length ||
+                userStats?.users?.length ||
+                userStats?.data?.totalUsers ||
+                userStats?.totalUsers ||
+                '0';
         } catch (error) {
             console.error('Failed to fetch user stats:', error);
         }
-        
+
         // Try to fetch ads stats
         let totalAds = '0';
         try {
@@ -240,23 +240,23 @@ async function renderDashboard() {
             });
             const adsData = await adsRes.json();
             console.log('Ads Response:', adsData);
-            
-            totalAds = adsData?.data?.ads?.length || 
-                      adsData?.ads?.length || 
-                      adsData?.data?.totalAds || 
-                      adsData?.totalAds || 
-                      '0';
+
+            totalAds = adsData?.data?.ads?.length ||
+                adsData?.ads?.length ||
+                adsData?.data?.totalAds ||
+                adsData?.totalAds ||
+                '0';
         } catch (error) {
             console.error('Failed to fetch ads stats:', error);
         }
-        
+
         statsGrid.innerHTML = `
             <div class="stat-card">
                 <div class="value">${totalDeposits}</div>
                 <div class="label">Total Deposits</div>
             </div>
             <div class="stat-card">
-                <div class="value">$${parseFloat(totalDepositAmount).toFixed(2)}</div>
+                <div class="value">RS  ${parseFloat(totalDepositAmount).toFixed(2)}</div>
                 <div class="label">Total Deposit Amount</div>
             </div>
             <div class="stat-card">
@@ -264,7 +264,7 @@ async function renderDashboard() {
                 <div class="label">Total Withdrawals</div>
             </div>
             <div class="stat-card">
-                <div class="value">$${parseFloat(totalWithdrawalAmount).toFixed(2)}</div>
+                        <div class="value">RS  ${parseFloat(totalWithdrawalAmount).toFixed(2)}</div>
                 <div class="label">Total Withdrawal Amount</div>
             </div>
             <div class="stat-card">
@@ -322,19 +322,25 @@ async function renderDeposits() {
             headers: { 'Authorization': `Bearer ${adminToken}` }
         });
         const data = await response.json();
-        const deposits = data.data.deposits; 
-        
+        const deposits = data.data.deposits;
+
         depositsTableBody.innerHTML = deposits.map(deposit => `
             <tr>
                 <td data-label="Deposit ID">${deposit._id}</td>
-                <td data-label="User UID">${deposit.uid}</td>
+                <td data-label="User UID">${deposit.uid || deposit.user?.uid || 'N/A'}</td>
                 <td data-label="Amount">$${deposit.amount}</td>
                 <td data-label="Status"><span class="badge ${deposit.status.toLowerCase()}">${deposit.status}</span></td>
                 <td data-label="Action">
-                    ${deposit.status === 'pending' ? `<button class="btn-approve btn-small" onclick="approveDeposit('${deposit._id}')">
-                        <i class="fas fa-check"></i>
-                        <span class="btn-text">Approve</span>
-                    </button>` : '<span class="no-action">No action needed</span>'}
+                    <div class="action-buttons">
+                        <button class="btn-approve btn-small" onclick="viewDepositDetails('${deposit._id}')">
+                            <i class="fas fa-eye"></i>
+                            <span class="btn-text">View</span>
+                        </button>
+                        ${deposit.status === 'pending' ? `<button class="btn-approve btn-small" onclick="approveDeposit('${deposit._id}')">
+                            <i class="fas fa-check"></i>
+                            <span class="btn-text">Approve</span>
+                        </button>` : '<span class="no-action">No action needed</span>'}
+                    </div>
                 </td>
             </tr>
         `).join('');
@@ -346,9 +352,13 @@ async function renderDeposits() {
 
 /**
  * Approves a deposit request.
- * @param {string} depositId The ID of the deposit to approve.
+ * @param {string} depositId The deposit ID to approve.
  */
 async function approveDeposit(depositId) {
+    if (!confirm('Are you sure you want to approve this deposit?')) {
+        return;
+    }
+
     try {
         const response = await fetch(`${API_BASE_URL}/admin/deposit/approve/${depositId}`, {
             method: 'PUT',
@@ -357,13 +367,12 @@ async function approveDeposit(depositId) {
                 'Content-Type': 'application/json'
             }
         });
-
+        const data = await response.json();
         if (response.ok) {
             showMessage('Deposit approved successfully!');
-            renderPage('deposits'); // Reload the page to show the update
+            renderPage('deposits'); // Reload the page
         } else {
-            const error = await response.json();
-            showMessage(`Error: ${error.message}`);
+            showMessage(`Error: ${data.message || 'Failed to approve deposit.'}`);
         }
     } catch (error) {
         console.error('Failed to approve deposit:', error);
@@ -372,7 +381,144 @@ async function approveDeposit(depositId) {
 }
 
 /**
- * Renders the withdrawals page with a list of pending withdrawal requests.
+ * Views detailed information for a specific deposit.
+ * @param {string} depositId The deposit ID to view details for.
+ */
+async function viewDepositDetails(depositId) {
+    try {
+        const response = await fetch(`${API_BASE_URL}/admin/deposits`, {
+            headers: { 'Authorization': `Bearer ${adminToken}` }
+        });
+
+        const data = await response.json();
+        const deposit = data.data.deposits.find(d => d._id === depositId);
+
+        if (deposit) {
+            contentArea.innerHTML = `
+                <div class="card">
+                    <div class="detail-header">
+                        <h3>Deposit Details</h3>
+                        <button class="btn-approve" onclick="renderPage('deposits')">
+                            <i class="fas fa-arrow-left"></i> Back to Deposits
+                        </button>
+                    </div>
+                    <div class="detail-content">
+                        <div class="detail-section">
+                            <h4>Transaction Information</h4>
+                            <div class="detail-grid">
+                                <div class="detail-item">
+                                    <strong>Deposit ID:</strong>
+                                    <span>${deposit._id}</span>
+                                </div>
+                                <div class="detail-item">
+                                    <strong>Amount:</strong>
+                                    <span>$${deposit.amount}</span>
+                                </div>
+                                <div class="detail-item">
+                                    <strong>Payment Method:</strong>
+                                    <span>${deposit.paymentMethod || 'N/A'}</span>
+                                </div>
+                                <div class="detail-item">
+                                    <strong>Status:</strong>
+                                    <span class="badge ${deposit.status.toLowerCase()}">${deposit.status}</span>
+                                </div>
+                                <div class="detail-item">
+                                    <strong>Created At:</strong>
+                                    <span>${new Date(deposit.createdAt).toLocaleString()}</span>
+                                </div>
+                                <div class="detail-item">
+                                    <strong>Updated At:</strong>
+                                    <span>${new Date(deposit.updatedAt).toLocaleString()}</span>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        ${deposit.paymentMethod === 'bank' ? `
+                        <div class="detail-section">
+                            <h4>Bank Information</h4>
+                            <div class="detail-grid">
+                                <div class="detail-item">
+                                    <strong>Bank Name:</strong>
+                                    <span>${deposit.bankName || 'N/A'}</span>
+                                </div>
+                                <div class="detail-item">
+                                    <strong>Account Holder Name:</strong>
+                                    <span>${deposit.accountHolderName || 'N/A'}</span>
+                                </div>
+                                <div class="detail-item">
+                                    <strong>Account Number:</strong>
+                                    <span>${deposit.accountNumber || 'N/A'}</span>
+                                </div>
+                                <div class="detail-item">
+                                    <strong>Email Address:</strong>
+                                    <span>${deposit.emailAddress || 'N/A'}</span>
+                                </div>
+                            </div>
+                        </div>
+                        ` : ''}
+                        
+                        ${deposit.user ? `
+                        <div class="detail-section">
+                            <h4>User Information</h4>
+                            <div class="detail-grid">
+                                <div class="detail-item">
+                                    <strong>User ID:</strong>
+                                    <span>${deposit.user._id}</span>
+                                </div>
+                                <div class="detail-item">
+                                    <strong>User UID:</strong>
+                                    <span>${deposit.user.uid}</span>
+                                </div>
+                                <div class="detail-item">
+                                    <strong>Name:</strong>
+                                    <span>${deposit.user.name}</span>
+                                </div>
+                                <div class="detail-item">
+                                    <strong>Phone Number:</strong>
+                                    <span>${deposit.user.phoneNumber}</span>
+                                </div>
+                                <div class="detail-item">
+                                    <strong>Plan:</strong>
+                                    <span>${deposit.user.plan}</span>
+                                </div>
+                                <div class="detail-item">
+                                    <strong>Total Balance:</strong>
+                                    <span>$${deposit.user.totalBalance}</span>
+                                </div>
+                                <div class="detail-item">
+                                    <strong>Total Withdrawals:</strong>
+                                    <span>$${deposit.user.totalWithdrawals}</span>
+                                </div>
+                                <div class="detail-item">
+                                    <strong>Level:</strong>
+                                    <span>${deposit.user.level}</span>
+                                </div>
+                            </div>
+                        </div>
+                        ` : ''}
+                        
+                        ${deposit.status === 'pending' ? `
+                        <div class="detail-actions">
+                            <button class="btn-approve" onclick="approveDeposit('${deposit._id}')">
+                                <i class="fas fa-check"></i>
+                                Approve Deposit
+                            </button>
+                        </div>
+                        ` : ''}
+                    </div>
+                </div>
+            `;
+        } else {
+            showMessage('Deposit not found.');
+        }
+    } catch (error) {
+        console.error('Failed to fetch deposit details:', error);
+        showMessage('Failed to fetch deposit details.');
+    }
+}
+
+/**
+ * Renders the withdrawals page with a list of withdrawal requests.
  */
 async function renderWithdrawals() {
     contentArea.innerHTML = `
@@ -403,34 +549,211 @@ async function renderWithdrawals() {
         const response = await fetch(`${API_BASE_URL}/admin/withdrawals`, {
             headers: { 'Authorization': `Bearer ${adminToken}` }
         });
+
         const data = await response.json();
-        const withdrawals = data.data.withdrawals;
-        
-        withdrawalsTableBody.innerHTML = withdrawals.map(withdrawal => `
-            <tr>
-                <td data-label="Request ID">${withdrawal._id}</td>
-                <td data-label="User UID">${withdrawal.user.uid}</td>
-                <td data-label="Amount">$${withdrawal.amount}</td>
-                <td data-label="Status"><span class="badge ${withdrawal.status.toLowerCase()}">${withdrawal.status}</span></td>
-                <td data-label="Action">
-                    ${withdrawal.status === 'pending' ? `<button class="btn-approve btn-small" onclick="approveWithdrawal('${withdrawal._id}')">
-                        <i class="fas fa-check"></i>
-                        <span class="btn-text">Approve</span>
-                    </button>` : '<span class="no-action">No action needed</span>'}
-                </td>
-            </tr>
-        `).join('');
+        console.log('Withdrawals API Response:', data);
+
+        // Handle different possible response structures
+        let withdrawals = [];
+        if (data.success && data.data && data.data.withdrawals) {
+            withdrawals = data.data.withdrawals;
+        } else if (data.data && Array.isArray(data.data)) {
+            withdrawals = data.data;
+        } else if (Array.isArray(data)) {
+            withdrawals = data;
+        } else if (data.withdrawals && Array.isArray(data.withdrawals)) {
+            withdrawals = data.withdrawals;
+        }
+
+        if (withdrawals && withdrawals.length > 0) {
+            withdrawalsTableBody.innerHTML = withdrawals.map(withdrawal => {
+                // Handle different user data structures
+                const userUid = withdrawal.user?.uid || withdrawal.uid || withdrawal.userId || 'N/A';
+
+                return `
+                    <tr>
+                        <td data-label="Request ID">${withdrawal._id}</td>
+                        <td data-label="User UID">${userUid}</td>
+                        <td data-label="Amount">$${withdrawal.amount}</td>
+                        <td data-label="Status"><span class="badge ${withdrawal.status.toLowerCase()}">${withdrawal.status}</span></td>
+                        <td data-label="Action">
+                            <div class="action-buttons">
+                                <button class="btn-approve btn-small" onclick="viewWithdrawalDetails('${withdrawal._id}')">
+                                    <i class="fas fa-eye"></i>
+                                    <span class="btn-text">View</span>
+                                </button>
+                                ${withdrawal.status === 'pending' ? `<button class="btn-approve btn-small" onclick="approveWithdrawal('${withdrawal._id}')">
+                                    <i class="fas fa-check"></i>
+                                    <span class="btn-text">Approve</span>
+                                </button>` : '<span class="no-action">No action needed</span>'}
+                            </div>
+                        </td>
+                    </tr>
+                `;
+            }).join('');
+        } else {
+            withdrawalsTableBody.innerHTML = '<tr><td colspan="5" class="no-data">No withdrawal requests found.</td></tr>';
+        }
     } catch (error) {
         console.error('Failed to fetch withdrawals:', error);
-        withdrawalsTableBody.innerHTML = `<tr><td colspan="5" class="error-data">Failed to load withdrawals.</td></tr>`;
+        withdrawalsTableBody.innerHTML = `<tr><td colspan="5" class="error-data">Failed to load withdrawals. Error: ${error.message}</td></tr>`;
     }
 }
+
+/**
+ * Views detailed information for a specific withdrawal.
+ * @param {string} withdrawalId The ID of the withdrawal to view.
+ */
+async function viewWithdrawalDetails(withdrawalId) {
+    try {
+        const response = await fetch(`${API_BASE_URL}/admin/withdrawals`, {
+            headers: { 'Authorization': `Bearer ${adminToken}` }
+        });
+
+        const data = await response.json();
+        let withdrawals = [];
+        if (data.success && data.data && data.data.withdrawals) {
+            withdrawals = data.data.withdrawals;
+        } else if (data.data && Array.isArray(data.data)) {
+            withdrawals = data.data;
+        } else if (Array.isArray(data)) {
+            withdrawals = data;
+        } else if (data.withdrawals && Array.isArray(data.withdrawals)) {
+            withdrawals = data.withdrawals;
+        }
+
+        const withdrawal = withdrawals.find(w => w._id === withdrawalId);
+
+        if (withdrawal) {
+            contentArea.innerHTML = `
+                <div class="card">
+                    <div class="detail-header">
+                        <h3>Withdrawal Details</h3>
+                        <button class="btn-approve" onclick="renderPage('withdrawals')">
+                            <i class="fas fa-arrow-left"></i> Back to Withdrawals
+                        </button>
+                    </div>
+                    <div class="detail-content">
+                        <div class="detail-section">
+                            <h4>Transaction Information</h4>
+                            <div class="detail-grid">
+                                <div class="detail-item">
+                                    <strong>Request ID:</strong>
+                                    <span>${withdrawal._id}</span>
+                                </div>
+                                <div class="detail-item">
+                                    <strong>Amount:</strong>
+                                    <span>$${withdrawal.amount}</span>
+                                </div>
+                                <div class="detail-item">
+                                    <strong>Payment Method:</strong>
+                                    <span>${withdrawal.paymentMethod || 'N/A'}</span>
+                                </div>
+                                <div class="detail-item">
+                                    <strong>Status:</strong>
+                                    <span class="badge ${withdrawal.status.toLowerCase()}">${withdrawal.status}</span>
+                                </div>
+                                <div class="detail-item">
+                                    <strong>Created At:</strong>
+                                    <span>${new Date(withdrawal.createdAt).toLocaleString()}</span>
+                                </div>
+                                <div class="detail-item">
+                                    <strong>Updated At:</strong>
+                                    <span>${new Date(withdrawal.updatedAt).toLocaleString()}</span>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        ${withdrawal.bankName ? `
+                        <div class="detail-section">
+                            <h4>Bank Information</h4>
+                            <div class="detail-grid">
+                                <div class="detail-item">
+                                    <strong>Bank Name:</strong>
+                                    <span>${withdrawal.bankName || 'N/A'}</span>
+                                </div>
+                                <div class="detail-item">
+                                    <strong>Account Holder Name:</strong>
+                                    <span>${withdrawal.accountHolderName || 'N/A'}</span>
+                                </div>
+                                <div class="detail-item">
+                                    <strong>Account Number:</strong>
+                                    <span>${withdrawal.accountNumber || 'N/A'}</span>
+                                </div>
+                            </div>
+                        </div>
+                        ` : ''}
+                        
+                        ${withdrawal.user ? `
+                        <div class="detail-section">
+                            <h4>User Information</h4>
+                            <div class="detail-grid">
+                                <div class="detail-item">
+                                    <strong>User ID:</strong>
+                                    <span>${withdrawal.user._id}</span>
+                                </div>
+                                <div class="detail-item">
+                                    <strong>User UID:</strong>
+                                    <span>${withdrawal.user.uid}</span>
+                                </div>
+                                <div class="detail-item">
+                                    <strong>Name:</strong>
+                                    <span>${withdrawal.user.name}</span>
+                                </div>
+                                <div class="detail-item">
+                                    <strong>Phone Number:</strong>
+                                    <span>${withdrawal.user.phoneNumber}</span>
+                                </div>
+                                <div class="detail-item">
+                                    <strong>Plan:</strong>
+                                    <span>${withdrawal.user.plan}</span>
+                                </div>
+                                <div class="detail-item">
+                                    <strong>Total Balance:</strong>
+                                    <span>$${withdrawal.user.totalBalance}</span>
+                                </div>
+                                <div class="detail-item">
+                                    <strong>Total Withdrawals:</strong>
+                                    <span>$${withdrawal.user.totalWithdrawals}</span>
+                                </div>
+                                <div class="detail-item">
+                                    <strong>Level:</strong>
+                                    <span>${withdrawal.user.level}</span>
+                                </div>
+                            </div>
+                        </div>
+                        ` : ''}
+                        
+                        ${withdrawal.status === 'pending' ? `
+                        <div class="detail-actions">
+                            <button class="btn-approve" onclick="approveWithdrawal('${withdrawal._id}')">
+                                <i class="fas fa-check"></i>
+                                Approve Withdrawal
+                            </button>
+                        </div>
+                        ` : ''}
+                    </div>
+                </div>
+            `;
+        } else {
+            showMessage('Withdrawal not found.');
+        }
+    } catch (error) {
+        console.error('Failed to fetch withdrawal details:', error);
+        showMessage('Failed to fetch withdrawal details.');
+    }
+}
+
 
 /**
  * Approves a withdrawal request.
  * @param {string} requestId The ID of the withdrawal request to approve.
  */
 async function approveWithdrawal(requestId) {
+    if (!confirm('Are you sure you want to approve this withdrawal?')) {
+        return;
+    }
+
     try {
         const response = await fetch(`${API_BASE_URL}/admin/withdrawal/approve/${requestId}`, {
             method: 'PUT',
@@ -483,7 +806,7 @@ async function renderUsers() {
             const url = isUid
                 ? `${API_BASE_URL}/admin/user/${searchValue}`
                 : `${API_BASE_URL}/admin/users/search?search=${searchValue}`;
-            
+
             const response = await fetch(url, {
                 headers: { 'Authorization': `Bearer ${adminToken}` }
             });
@@ -508,7 +831,7 @@ async function renderUsers() {
                         </div>
                     `;
                 } else {
-                     searchResultsDiv.innerHTML = '<p class="card">No user found with that UID or email.</p>';
+                    searchResultsDiv.innerHTML = '<p class="card">No user found with that UID or email.</p>';
                 }
             } else {
                 searchResultsDiv.innerHTML = `<p class="card">Error: ${data.message}</p>`;
@@ -533,7 +856,7 @@ async function viewTeam(referralCode) {
         });
         const data = await response.json();
         const team = data.data.users;
-        
+
         if (response.ok && data.success && team && team.length > 0) {
             teamContainer.innerHTML = `
                 <div class="card">
@@ -586,7 +909,7 @@ function renderCreateAd() {
             </form>
         </div>
     `;
-    
+
     const createAdForm = document.getElementById('create-ad-form');
     createAdForm.addEventListener('submit', async (e) => {
         e.preventDefault();
@@ -619,7 +942,7 @@ function renderCreateAd() {
                     adId: Date.now().toString()
                 })
             });
-            
+
             const data = await response.json();
             if (response.ok) {
                 showMessage('Ad created successfully!');
@@ -644,7 +967,7 @@ async function getAllUsers() {
         const response = await fetch(`${API_BASE_URL}/admin/users`, {
             headers: { 'Authorization': `Bearer ${adminToken}` }
         });
-        
+
         const data = await response.json();
         if (response.ok && data.success) {
             return data.data.users || [];
@@ -692,7 +1015,7 @@ async function renderAllUsers() {
     const usersTableBody = document.getElementById('all-users-table-body');
     try {
         const users = await getAllUsers();
-        
+
         if (users.length > 0) {
             usersTableBody.innerHTML = users.map(user => `
                 <tr>
@@ -735,12 +1058,12 @@ async function viewUserDetails(uid) {
         const response = await fetch(`${API_BASE_URL}/admin/user/${uid}`, {
             headers: { 'Authorization': `Bearer ${adminToken}` }
         });
-        
+
         const data = await response.json();
         if (response.ok && data.success) {
             const user = data.data.user;
             const userDetailsDiv = document.getElementById('all-users-table-body').parentElement.parentElement;
-            
+
             userDetailsDiv.innerHTML = `
                 <div class="card">
                     <h3>User Details - ${user.name}</h3>
@@ -855,16 +1178,16 @@ async function renderAdminAccounts() {
                             <i class="fas fa-trash"></i>
                             <span class="btn-text">Delete</span>
                         </button>
-                        ${account.isActive ? 
-                            `<button class="btn-delete btn-small" onclick="deactivateAdminAccount('${account._id}', '${account.accountHolderName}')">
+                        ${account.isActive ?
+                    `<button class="btn-delete btn-small" onclick="deactivateAdminAccount('${account._id}', '${account.accountHolderName}')">
                                 <i class="fas fa-ban"></i>
                                 <span class="btn-text">Deactivate</span>
-                            </button>` : 
-                            `<button class="btn-approve btn-small" onclick="activateAdminAccount('${account._id}', '${account.accountHolderName}')">
+                            </button>` :
+                    `<button class="btn-approve btn-small" onclick="activateAdminAccount('${account._id}', '${account.accountHolderName}')">
                                 <i class="fas fa-check"></i>
                                 <span class="btn-text">Activate</span>
                             </button>`
-                        }
+                }
                     </div>
                 </div>
             `).join('');
@@ -900,7 +1223,7 @@ async function deleteAd(_id, adName) {
         });
 
         const data = await response.json();
-        
+
         if (response.ok && data.success) {
             showMessage('Ad deleted successfully!');
             renderPage('all-ads'); // Reload the page to show the update
@@ -1103,7 +1426,7 @@ async function renderAllAds() {
             headers: { 'Authorization': `Bearer ${adminToken}` }
         });
         const data = await response.json();
-        
+
         // Access the ads array from data.data
         const ads = data?.data?.ads || [];
 
