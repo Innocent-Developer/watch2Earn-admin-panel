@@ -300,15 +300,17 @@ async function renderDeposits() {
                     <table class="data-table">
                         <thead>
                             <tr>
-                                <th>Deposit ID</th>
+                                <th>Transaction ID</th>
                                 <th>User UID</th>
                                 <th>Amount</th>
+                                <th>Bank</th>
+                                <th>Sender Name</th>
                                 <th>Status</th>
                                 <th>Action</th>
                             </tr>
                         </thead>
                         <tbody id="deposits-table-body">
-                            <tr><td colspan="5">Loading deposits...</td></tr>
+                            <tr><td colspan="7">Loading deposits...</td></tr>
                         </tbody>
                     </table>
                 </div>
@@ -326,9 +328,11 @@ async function renderDeposits() {
 
         depositsTableBody.innerHTML = deposits.map(deposit => `
             <tr>
-                <td data-label="Deposit ID">${deposit._id}</td>
+                <td data-label="Transaction ID">${deposit.transactionId || 'N/A'}</td>
                 <td data-label="User UID">${deposit.uid || deposit.user?.uid || 'N/A'}</td>
-                <td data-label="Amount">$${deposit.amount}</td>
+                <td data-label="Amount">RS ${deposit.amount}</td>
+                <td data-label="Bank">${deposit.bankName || 'N/A'}</td>
+                <td data-label="Sender Name">${deposit.senderName || 'N/A'}</td>
                 <td data-label="Status"><span class="badge ${deposit.status.toLowerCase()}">${deposit.status}</span></td>
                 <td data-label="Action">
                     <div class="action-buttons">
@@ -346,7 +350,7 @@ async function renderDeposits() {
         `).join('');
     } catch (error) {
         console.error('Failed to fetch deposits:', error);
-        depositsTableBody.innerHTML = `<tr><td colspan="5" class="error-data">Failed to load deposits.</td></tr>`;
+        depositsTableBody.innerHTML = `<tr><td colspan="7" class="error-data">Failed to load deposits.</td></tr>`;
     }
 }
 
@@ -411,12 +415,24 @@ async function viewDepositDetails(depositId) {
                                     <span>${deposit._id}</span>
                                 </div>
                                 <div class="detail-item">
-                                    <strong>Amount:</strong>
-                                    <span>$${deposit.amount}</span>
+                                    <strong>Transaction ID:</strong>
+                                    <span>${deposit.transactionId || 'N/A'}</span>
                                 </div>
                                 <div class="detail-item">
-                                    <strong>Payment Method:</strong>
-                                    <span>${deposit.paymentMethod || 'N/A'}</span>
+                                    <strong>Amount:</strong>
+                                    <span>RS ${deposit.amount}</span>
+                                </div>
+                                <div class="detail-item">
+                                    <strong>Bank Name:</strong>
+                                    <span>${deposit.bankName || 'N/A'}</span>
+                                </div>
+                                <div class="detail-item">
+                                    <strong>Sender Name:</strong>
+                                    <span>${deposit.senderName || 'N/A'}</span>
+                                </div>
+                                <div class="detail-item">
+                                    <strong>Sender Phone:</strong>
+                                    <span>${deposit.senderPhone || 'N/A'}</span>
                                 </div>
                                 <div class="detail-item">
                                     <strong>Status:</strong>
@@ -433,29 +449,17 @@ async function viewDepositDetails(depositId) {
                             </div>
                         </div>
                         
-                        ${deposit.paymentMethod === 'bank' ? `
+                        ${deposit.pic ? `
                         <div class="detail-section">
-                            <h4>Bank Information</h4>
-                            <div class="detail-grid">
-                                <div class="detail-item">
-                                    <strong>Bank Name:</strong>
-                                    <span>${deposit.bankName || 'N/A'}</span>
-                                </div>
-                                <div class="detail-item">
-                                    <strong>Account Holder Name:</strong>
-                                    <span>${deposit.accountHolderName || 'N/A'}</span>
-                                </div>
-                                <div class="detail-item">
-                                    <strong>Account Number:</strong>
-                                    <span>${deposit.accountNumber || 'N/A'}</span>
-                                </div>
-                                <div class="detail-item">
-                                    <strong>Email Address:</strong>
-                                    <span>${deposit.emailAddress || 'N/A'}</span>
-                                </div>
+                            <h4>Payment Proof</h4>
+                            <div class="payment-proof-container">
+                                <img src="${deposit.pic}" alt="Payment Proof" style="max-width: 100%; max-height: 400px; border: 1px solid #ddd; border-radius: 8px; cursor: pointer;" onclick="window.open('${deposit.pic}', '_blank')">
+                                <p style="margin-top: 10px; font-size: 14px; color: #666;">Click image to view full size</p>
                             </div>
                         </div>
                         ` : ''}
+                        
+
                         
                         ${deposit.user ? `
                         <div class="detail-section">
